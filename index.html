@@ -14,39 +14,44 @@ button{background:#007aff;color:#fff;border:none;border-radius:10px}
 .sets{display:flex;gap:6px}
 .sets input{flex:1}
 .small{font-size:13px;color:#666}
-.timer{font-size:20px;font-weight:bold;text-align:center;margin-top:10px}
-hr{border:none;border-top:1px solid #ddd;margin:12px 0}
+.timer{font-size:22px;font-weight:bold;text-align:center;margin-top:10px}
 </style>
 </head>
 
 <body>
 
 <h2>🏋️ Fitness Tracker</h2>
-<p class="small">Option B • Auto Rest Timer • Local Only</p>
+<p class="small">5-Day Strength + Optional Day 6 Cardio/Stretching • Local Only</p>
 
 <!-- DAY SELECT -->
 <div class="card">
 <h3>📅 Workout Day</h3>
 <select id="daySelect" onchange="renderWorkout()">
-  <option value="day1">Day 1 – Upper</option>
+  <option value="day1">Day 1 – Upper (Push + Pull)</option>
   <option value="day2">Day 2 – Lower</option>
   <option value="day3">Day 3 – Cardio + Core</option>
+  <option value="day4">Day 4 – Upper (Angles)</option>
+  <option value="day5">Day 5 – Lower + Core</option>
+  <option value="day6">Day 6 – Optional Cardio / Stretching</option>
 </select>
 </div>
 
 <!-- WARM UP -->
 <div class="card">
-<h3>🔥 Warm-Up</h3>
+<h3>🔥 Daily Warm-Up (10 min)</h3>
 <p class="small">
-5 min light cardio<br>
-Dynamic mobility
+5 min treadmill / bike / elliptical<br>
+Arm circles ×20<br>
+Leg swings ×15/leg<br>
+Hip circles ×10<br>
+Bodyweight squats ×15
 </p>
 <button onclick="logSection('warmup')">Warm-Up Done</button>
 </div>
 
 <!-- TIMER -->
 <div class="card">
-<h3>⏱ Rest Timer</h3>
+<h3>⏱ Rest Timer (60s)</h3>
 <div id="timer" class="timer">60</div>
 <button onclick="resetTimer()">Reset Timer</button>
 </div>
@@ -54,77 +59,89 @@ Dynamic mobility
 <!-- WORKOUT -->
 <div class="card" id="workoutArea"></div>
 
-<!-- CARDIO -->
-<div class="card">
-<h3>❤️ Cardio</h3>
-<input id="cardioType" placeholder="Type">
-<input id="cardioTime" placeholder="Minutes">
-<button onclick="saveCardio()">Save Cardio</button>
-</div>
-
 <!-- BODY WEIGHT -->
 <div class="card">
 <h3>⚖️ Body Weight</h3>
-<input id="bodyWeight" type="number" placeholder="Weight">
-<button onclick="saveBodyWeight()">Save Weight</button>
+<input id="bodyWeight" type="number" placeholder="Enter body weight">
+<button onclick="saveBodyWeight()">Save</button>
 </div>
 
 <!-- LOG -->
 <div class="card">
-<h3>📊 Today</h3>
+<h3>📊 Today’s Log</h3>
 <pre id="log" class="small"></pre>
 </div>
 
 <script>
-const today = new Date().toLocaleDateString();
-let timerInterval;
-let timeLeft = 60;
+const today=new Date().toLocaleDateString();
+let timerInterval,timeLeft=60;
 
-const workouts = {
+// Full 6-day plan
+const workouts={
 day1:[
- {name:"Chest Press",sets:3},
- {name:"Pec Deck",sets:3},
- {name:"Lat Pulldown",sets:3},
- {name:"Seated Row",sets:3},
- {name:"Shoulder Press",sets:3},
- {name:"Lateral Raise",sets:3},
- {name:"Triceps Pushdown",sets:3},
- {name:"Biceps Curl",sets:3}
+["Chest Press",3],
+["Pec Deck",3],
+["Lat Pulldown",3],
+["Seated Row",3],
+["Shoulder Press",3],
+["Lateral Raise Machine",3],
+["Triceps Pushdown",3],
+["Biceps Curl Machine",3]
 ],
 day2:[
- {name:"Leg Press",sets:4},
- {name:"Leg Curl",sets:3},
- {name:"Leg Extension",sets:3},
- {name:"Hip Abductor",sets:3},
- {name:"Calf Raise",sets:4}
+["Leg Press",4],
+["Seated Leg Curl",3],
+["Leg Extension",3],
+["Hip Abductor",3],
+["Calf Raise",4]
 ],
 day3:[
- {name:"Cardio + Core",sets:0}
+["Ab Crunch Machine",3],
+["Cable Woodchoppers (each side)",3],
+["Plank (seconds)",3]
+],
+day4:[
+["Incline Chest Press",3],
+["Assisted Pull-Up / Wide Pulldown",3],
+["Rear Delt Fly",3],
+["Shoulder Press",3],
+["Face Pull",3],
+["Assisted Dips",3],
+["Preacher Curl Machine",3]
+],
+day5:[
+["Hack Squat / Leg Press",4],
+["RDL Machine / Lying Curl",3],
+["Walking Lunges (per leg)",3],
+["Hip Thrust / Glute Bridge",3],
+["Calf Raise",4],
+["Hanging Knee Raises",3],
+["Plank (seconds)",3]
+],
+day6:[
+["Cardio Type / Duration",0],
+["Stretching Exercises / Duration",0]
 ]
 };
 
 function startTimer(){
  clearInterval(timerInterval);
- timeLeft = 60;
- document.getElementById("timer").textContent = timeLeft;
- timerInterval = setInterval(()=>{
-   timeLeft--;
-   document.getElementById("timer").textContent = timeLeft;
-   if(timeLeft<=0){
-     clearInterval(timerInterval);
-     document.getElementById("timer").textContent="Rest Over!";
-   }
+ timeLeft=60;
+ document.getElementById("timer").textContent=timeLeft;
+ timerInterval=setInterval(()=>{
+  timeLeft--;
+  document.getElementById("timer").textContent=timeLeft<=0?"Rest Over!":timeLeft;
+  if(timeLeft<=0) clearInterval(timerInterval);
  },1000);
 }
-
 function resetTimer(){
  clearInterval(timerInterval);
- timeLeft = 60;
- document.getElementById("timer").textContent = 60;
+ timeLeft=60;
+ document.getElementById("timer").textContent=60;
 }
 
 function getLog(){
- return JSON.parse(localStorage.getItem(today) || "{}");
+ return JSON.parse(localStorage.getItem(today)||"{}");
 }
 function saveLog(d){
  localStorage.setItem(today,JSON.stringify(d));
@@ -143,38 +160,33 @@ function renderWorkout(){
  area.innerHTML="<h3>🏋️ Workout</h3>";
 
  workouts[day].forEach(ex=>{
-  const div=document.createElement("div");
+  let div=document.createElement("div");
   div.className="exercise";
-  let html=`<b>${ex.name}</b>`;
-  if(ex.sets>0){
+  let html=`<b>${ex[0]}</b>`;
+  if(ex[1]>0){
     html+=`<div class="sets">`;
-    for(let i=1;i<=ex.sets;i++){
+    for(let i=1;i<=ex[1];i++){
       html+=`<input placeholder="Set ${i}" oninput="startTimer()">`;
     }
     html+=`</div>`;
   } else {
-    html+=`<p class="small">30–40 min steady cardio + core</p>`;
+    html+=`<p class="small">Log cardio type/duration or stretching here</p>`;
+    html+=`<input placeholder="Type / Duration">`;
   }
   div.innerHTML=html;
   area.appendChild(div);
  });
 
- const btn=document.createElement("button");
+ let btn=document.createElement("button");
  btn.textContent="Save Workout";
  btn.onclick=saveWorkout;
  area.appendChild(btn);
 }
 
 function saveWorkout(){
- const inputs=[...document.querySelectorAll("#workoutArea input")].map(i=>i.value);
+ const vals=[...document.querySelectorAll("#workoutArea input")].map(i=>i.value);
  const l=getLog();
- l.workout=inputs;
- saveLog(l);
-}
-
-function saveCardio(){
- const l=getLog();
- l.cardio=document.getElementById("cardioType").value+" "+document.getElementById("cardioTime").value+" min";
+ l.workout=vals;
  saveLog(l);
 }
 
