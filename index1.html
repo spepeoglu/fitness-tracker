@@ -60,6 +60,19 @@ Bodyweight squats ×15
 </div>
 
 <script>
+// ---------- Safe Storage for Safari ----------
+function safeStorage() {
+  try {
+    const testKey = "__test__";
+    localStorage.setItem(testKey, "1");
+    localStorage.removeItem(testKey);
+    return localStorage;
+  } catch(e) {
+    return null;
+  }
+}
+const storage = safeStorage();
+
 // ---------- Variables ----------
 const today = new Date().toLocaleDateString();
 let timerInterval, timeLeft = 60;
@@ -109,9 +122,15 @@ document.getElementById("resetTimer").addEventListener("click",()=>{
   clearInterval(timerInterval);
 });
 
-// ---------- LocalStorage ----------
-function getLog(){ return JSON.parse(localStorage.getItem(today)||"{}"); }
-function saveLog(d){ localStorage.setItem(today,JSON.stringify(d)); renderChart(); }
+// ---------- LocalStorage helpers ----------
+function getLog(){
+  if (!storage) return {};
+  return JSON.parse(storage.getItem(today) || "{}");
+}
+function saveLog(d){
+  if (storage) storage.setItem(today, JSON.stringify(d));
+  renderChart();
+}
 
 // ---------- Warmup ----------
 document.getElementById("warmupBtn").addEventListener("click",()=>{
@@ -143,7 +162,11 @@ function renderWorkout(){
   area.innerHTML = "<h3>🏋️ Workout</h3>";
 
   let lastSession = {};
-  try { lastSession = JSON.parse(localStorage.getItem(day+"_lastSession")||"{}"); } catch(e){}
+  if (storage) {
+    try {
+      lastSession = JSON.parse(storage.getItem(day+"_lastSession")||"{}");
+    } catch(e){}
+  }
 
   workouts[day].forEach(ex=>{
     const div = document.createElement("div");
@@ -211,12 +234,16 @@ function saveWorkout(day){
 
   // Load previous lastSession (to become lastWeek)
   let prevLastSession = {};
-  try {
-    prevLastSession = JSON.parse(localStorage.getItem(day + "_lastSession") || "{}");
-  } catch(e) {}
+  if (storage) {
+    try {
+      prevLastSession = JSON.parse(storage.getItem(day + "_lastSession") || "{}");
+    } catch(e) {}
+  }
 
   // Save lastWeek from previous session
-  localStorage.setItem(day + "_lastWeek", JSON.stringify(prevLastSession));
+  if (storage) {
+    storage.setItem(day + "_lastWeek", JSON.stringify(prevLastSession));
+  }
 
   // Save last session including post-workout
   let lastSession = {};
@@ -236,7 +263,9 @@ function saveWorkout(day){
       lastSession[item] = inputs[inputIndex++]||"";
     });
   }
-  localStorage.setItem(day+"_lastSession", JSON.stringify(lastSession));
+  if (storage) {
+    storage.setItem(day+"_lastSession", JSON.stringify(lastSession));
+  }
   renderChart();
 }
 
@@ -244,7 +273,6 @@ function saveWorkout(day){
 function renderChart(){
   const l = getLog();
   if (!l.workout) {
-    // nothing saved yet; avoid errors
     if (chartInstance) chartInstance.destroy();
     return;
   }
@@ -254,9 +282,11 @@ function renderChart(){
 
   let labels=[], lastWeekData=[], thisWeekData=[];
   let lastWeek = {};
-  try {
-    lastWeek = JSON.parse(localStorage.getItem(day+"_lastWeek")||"{}");
-  } catch(e){}
+  if (storage) {
+    try {
+      lastWeek = JSON.parse(storage.getItem(day+"_lastWeek")||"{}");
+    } catch(e){}
+  }
 
   let inputIndex=0;
 
