@@ -23,13 +23,11 @@ canvas{margin-top:10px;background:#f9f9f9;border-radius:8px;padding:10px}
 <h2>🏋️ Fitness Tracker</h2>
 <p class="small">5-Day Strength + Optional Day 6 Cardio/Stretch • Mini Bar Charts • Local Only</p>
 
-<!-- Day Select -->
 <div class="card">
 <h3>📅 Workout Day</h3>
 <select id="daySelect"></select>
 </div>
 
-<!-- Warm-up -->
 <div class="card">
 <h3>🔥 Daily Warm-Up (10 min)</h3>
 <p class="small">
@@ -42,24 +40,20 @@ Bodyweight squats ×15
 <button id="warmupBtn">Warm-Up Done</button>
 </div>
 
-<!-- Timer -->
 <div class="card">
 <h3>⏱ Rest Timer (60s)</h3>
 <div id="timer" class="timer">60</div>
 <button id="resetTimer">Reset</button>
 </div>
 
-<!-- Workout Area -->
 <div class="card" id="workoutArea"></div>
 
-<!-- Body Weight -->
 <div class="card">
 <h3>⚖️ Body Weight</h3>
 <input id="bodyWeight" type="number" placeholder="Enter body weight">
 <button id="saveWeight">Save</button>
 </div>
 
-<!-- Charts -->
 <div class="card">
 <h3>📊 Today’s Progress</h3>
 <canvas id="chartArea"></canvas>
@@ -89,7 +83,6 @@ day5:[["Hack Squat / Leg Press",4],["RDL Machine / Lying Curl",3],["Walking Lung
 day6:[["Cardio Type / Duration",0],["Stretching Exercises / Duration",0]]
 };
 
-// Post-Workout
 const postWorkout = {
 day1:["Cardio Type","Cardio Minutes"],
 day2:["Cardio Type","Cardio Minutes"],
@@ -148,7 +141,6 @@ function renderWorkout(){
  let lastSession = {};
 try { lastSession = JSON.parse(localStorage.getItem(day+"_lastSession")||"{}"); } catch(e){}
 
- // Main exercises
  workouts[day].forEach(ex=>{
    const div = document.createElement("div");
    div.className = "exercise";
