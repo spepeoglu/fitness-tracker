@@ -5,6 +5,9 @@
 <title>Fitness Tracker</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 
+<!-- Chart.js for charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{font-family:-apple-system;background:#f2f2f7;padding:20px}
 .card{background:#fff;padding:15px;margin-bottom:15px;border-radius:12px}
@@ -15,15 +18,15 @@ button{background:#007aff;color:#fff;border:none;border-radius:10px}
 .sets input{flex:1}
 .small{font-size:13px;color:#666}
 .timer{font-size:22px;font-weight:bold;text-align:center;margin-top:10px}
+canvas{margin-top:10px;background:#f9f9f9;border-radius:8px;padding:10px}
 </style>
 </head>
-
 <body>
 
 <h2>🏋️ Fitness Tracker</h2>
-<p class="small">5-Day Strength + Optional Day 6 Cardio/Stretching • Local Only</p>
+<p class="small">5-Day Strength + Optional Day 6 Cardio/Stretch • Mini Bar Charts • Local Only</p>
 
-<!-- DAY SELECT -->
+<!-- Day Select -->
 <div class="card">
 <h3>📅 Workout Day</h3>
 <select id="daySelect" onchange="renderWorkout()">
@@ -32,11 +35,11 @@ button{background:#007aff;color:#fff;border:none;border-radius:10px}
   <option value="day3">Day 3 – Cardio + Core</option>
   <option value="day4">Day 4 – Upper (Angles)</option>
   <option value="day5">Day 5 – Lower + Core</option>
-  <option value="day6">Day 6 – Optional Cardio / Stretching</option>
+  <option value="day6">Day 6 – Optional Cardio / Stretch</option>
 </select>
 </div>
 
-<!-- WARM UP -->
+<!-- Warm-up -->
 <div class="card">
 <h3>🔥 Daily Warm-Up (10 min)</h3>
 <p class="small">
@@ -49,35 +52,35 @@ Bodyweight squats ×15
 <button onclick="logSection('warmup')">Warm-Up Done</button>
 </div>
 
-<!-- TIMER -->
+<!-- Timer -->
 <div class="card">
 <h3>⏱ Rest Timer (60s)</h3>
 <div id="timer" class="timer">60</div>
-<button onclick="resetTimer()">Reset Timer</button>
+<button onclick="resetTimer()">Reset</button>
 </div>
 
-<!-- WORKOUT -->
+<!-- Workout Area -->
 <div class="card" id="workoutArea"></div>
 
-<!-- BODY WEIGHT -->
+<!-- Body Weight -->
 <div class="card">
 <h3>⚖️ Body Weight</h3>
 <input id="bodyWeight" type="number" placeholder="Enter body weight">
 <button onclick="saveBodyWeight()">Save</button>
 </div>
 
-<!-- LOG -->
+<!-- Charts -->
 <div class="card">
-<h3>📊 Today’s Log</h3>
-<pre id="log" class="small"></pre>
+<h3>📊 Today’s Progress</h3>
+<canvas id="chartArea"></canvas>
 </div>
 
 <script>
-const today=new Date().toLocaleDateString();
-let timerInterval,timeLeft=60;
+const today = new Date().toLocaleDateString();
+let timerInterval, timeLeft = 60;
+let chartInstance;
 
-// Full 6-day plan
-const workouts={
+const workouts = {
 day1:[
 ["Chest Press",3],
 ["Pec Deck",3],
@@ -124,13 +127,14 @@ day6:[
 ]
 };
 
+// Timer functions
 function startTimer(){
  clearInterval(timerInterval);
  timeLeft=60;
  document.getElementById("timer").textContent=timeLeft;
  timerInterval=setInterval(()=>{
   timeLeft--;
-  document.getElementById("timer").textContent=timeLeft<=0?"Rest Over!":timeLeft;
+  document.getElementById("timer").textContent = timeLeft<=0?"Rest Over!":timeLeft;
   if(timeLeft<=0) clearInterval(timerInterval);
  },1000);
 }
@@ -140,69 +144,132 @@ function resetTimer(){
  document.getElementById("timer").textContent=60;
 }
 
+// LocalStorage functions
 function getLog(){
  return JSON.parse(localStorage.getItem(today)||"{}");
 }
 function saveLog(d){
  localStorage.setItem(today,JSON.stringify(d));
- renderLog();
+ renderChart();
 }
 
 function logSection(s){
- const l=getLog();
- l[s]="Done";
+ const l = getLog();
+ l[s] = "Done";
  saveLog(l);
 }
 
+// Workout render
 function renderWorkout(){
- const day=document.getElementById("daySelect").value;
- const area=document.getElementById("workoutArea");
+ const day = document.getElementById("daySelect").value;
+ const area = document.getElementById("workoutArea");
  area.innerHTML="<h3>🏋️ Workout</h3>";
 
- workouts[day].forEach(ex=>{
-  let div=document.createElement("div");
+ // Load last week data for reference
+ const lastWeek = JSON.parse(localStorage.getItem(day+"_lastWeek")||"{}");
+
+ workouts[day].forEach((ex,index)=>{
+  let div = document.createElement("div");
   div.className="exercise";
   let html=`<b>${ex[0]}</b>`;
   if(ex[1]>0){
     html+=`<div class="sets">`;
     for(let i=1;i<=ex[1];i++){
-      html+=`<input placeholder="Set ${i}" oninput="startTimer()">`;
+      let lastVal = lastWeek[ex[0]] ? lastWeek[ex[0]][i-1] : "";
+      html+=`<input placeholder="Set ${i}" value="${lastVal}" oninput="startTimer()">`;
     }
     html+=`</div>`;
   } else {
     html+=`<p class="small">Log cardio type/duration or stretching here</p>`;
     html+=`<input placeholder="Type / Duration">`;
   }
-  div.innerHTML=html;
+  div.innerHTML = html;
   area.appendChild(div);
  });
 
  let btn=document.createElement("button");
  btn.textContent="Save Workout";
- btn.onclick=saveWorkout;
+ btn.onclick=()=>saveWorkout(day);
  area.appendChild(btn);
 }
 
-function saveWorkout(){
- const vals=[...document.querySelectorAll("#workoutArea input")].map(i=>i.value);
- const l=getLog();
- l.workout=vals;
+// Save workout with history for chart
+function saveWorkout(day){
+ const inputs = [...document.querySelectorAll("#workoutArea input")].map(i=>i.value);
+ const l = getLog();
+ l.workout = inputs;
  saveLog(l);
+
+ // Save for last week reference
+ let lastWeekData = {};
+ let exIndex = 0;
+ workouts[day].forEach(ex=>{
+   let arr = [];
+   for(let i=0;i<ex[1];i++){
+     arr.push(inputs[exIndex]||0);
+     exIndex++;
+   }
+   lastWeekData[ex[0]] = arr;
+ });
+ localStorage.setItem(day+"_lastWeek", JSON.stringify(lastWeekData));
+ renderChart();
 }
 
+// Save body weight
 function saveBodyWeight(){
- const l=getLog();
- l.bodyWeight=document.getElementById("bodyWeight").value;
+ const l = getLog();
+ l.bodyWeight = document.getElementById("bodyWeight").value;
  saveLog(l);
 }
 
-function renderLog(){
- document.getElementById("log").textContent=
- JSON.stringify(getLog(),null,2);
+// Render chart
+function renderChart(){
+ const l = getLog();
+ const day = document.getElementById("daySelect").value;
+ const ctx = document.getElementById("chartArea").getContext("2d");
+
+ let labels=[], lastWeekData=[], thisWeekData=[];
+ let lastWeek = JSON.parse(localStorage.getItem(day+"_lastWeek")||"{}");
+ let inputIndex=0;
+
+ workouts[day].forEach(ex=>{
+  if(ex[1]>0){
+    for(let s=1;s<=ex[1];s++){
+      labels.push(ex[0]+" Set "+s);
+      let lw = lastWeek[ex[0]] ? Number(lastWeek[ex[0]][s-1]||0) : 0;
+      let tw = Number(l.workout ? l.workout[inputIndex++]||0 : 0);
+      lastWeekData.push(lw);
+      thisWeekData.push(tw);
+    }
+  } else {
+    labels.push(ex[0]);
+    lastWeekData.push(0);
+    thisWeekData.push(0);
+  }
+ });
+
+ if(chartInstance) chartInstance.destroy();
+ chartInstance = new Chart(ctx,{
+  type:"bar",
+  data:{
+   labels: labels,
+   datasets:[
+     {label:"Last Week", data:lastWeekData, backgroundColor:"rgba(0,123,255,0.4)"},
+     {label:"This Week", data:thisWeekData, backgroundColor:"rgba(0,123,255,1)"}
+   ]
+  },
+  options:{
+   responsive:true,
+   plugins:{legend:{position:"top"}},
+   scales:{
+     y:{beginAtZero:true}
+   }
+  }
+ });
 }
 
 renderWorkout();
-renderLog();
+renderChart();
 </script>
 
 </body>
