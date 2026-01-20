@@ -246,11 +246,11 @@ function renderChart(){
  });
 
  if(postWorkout[day]){
-   postWorkout[day].forEach(item){
+   postWorkout[day].forEach(item=>{
      labels.push(item);
      lastWeekData.push(0);
      thisWeekData.push(l.workout ? l.workout[inputIndex++]||0:0);
-   }
+   });
  }
 
  if(chartInstance) chartInstance.destroy();
