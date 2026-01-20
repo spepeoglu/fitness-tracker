@@ -24,7 +24,7 @@ canvas{margin-top:10px;background:#f9f9f9;border-radius:8px;padding:10px}
 <body>
 
 <h2>🏋️ Fitness Tracker</h2>
-<p class="small">5-Day Strength + Optional Day 6 Cardio/Stretch • Mini Bar Charts • Local Only</p>
+<p class="small">Full 6-Day Plan + Auto-fill Last Session + Mini Bar Charts • Local Only</p>
 
 <!-- Day Select -->
 <div class="card">
@@ -80,51 +80,24 @@ const today = new Date().toLocaleDateString();
 let timerInterval, timeLeft = 60;
 let chartInstance;
 
+// Full plan
 const workouts = {
-day1:[
-["Chest Press",3],
-["Pec Deck",3],
-["Lat Pulldown",3],
-["Seated Row",3],
-["Shoulder Press",3],
-["Lateral Raise Machine",3],
-["Triceps Pushdown",3],
-["Biceps Curl Machine",3]
-],
-day2:[
-["Leg Press",4],
-["Seated Leg Curl",3],
-["Leg Extension",3],
-["Hip Abductor",3],
-["Calf Raise",4]
-],
-day3:[
-["Ab Crunch Machine",3],
-["Cable Woodchoppers (each side)",3],
-["Plank (seconds)",3]
-],
-day4:[
-["Incline Chest Press",3],
-["Assisted Pull-Up / Wide Pulldown",3],
-["Rear Delt Fly",3],
-["Shoulder Press",3],
-["Face Pull",3],
-["Assisted Dips",3],
-["Preacher Curl Machine",3]
-],
-day5:[
-["Hack Squat / Leg Press",4],
-["RDL Machine / Lying Curl",3],
-["Walking Lunges (per leg)",3],
-["Hip Thrust / Glute Bridge",3],
-["Calf Raise",4],
-["Hanging Knee Raises",3],
-["Plank (seconds)",3]
-],
-day6:[
-["Cardio Type / Duration",0],
-["Stretching Exercises / Duration",0]
-]
+day1:[["Chest Press",3],["Pec Deck",3],["Lat Pulldown",3],["Seated Row",3],["Shoulder Press",3],["Lateral Raise Machine",3],["Triceps Pushdown",3],["Biceps Curl Machine",3]],
+day2:[["Leg Press",4],["Seated Leg Curl",3],["Leg Extension",3],["Hip Abductor",3],["Calf Raise",4]],
+day3:[["Ab Crunch Machine",3],["Cable Woodchoppers (each side)",3],["Plank (seconds)",3]],
+day4:[["Incline Chest Press",3],["Assisted Pull-Up / Wide Pulldown",3],["Rear Delt Fly",3],["Shoulder Press",3],["Face Pull",3],["Assisted Dips",3],["Preacher Curl Machine",3]],
+day5:[["Hack Squat / Leg Press",4],["RDL Machine / Lying Curl",3],["Walking Lunges (per leg)",3],["Hip Thrust / Glute Bridge",3],["Calf Raise",4],["Hanging Knee Raises",3],["Plank (seconds)",3]],
+day6:[["Cardio Type / Duration",0],["Stretching Exercises / Duration",0]]
+};
+
+// Post-workout per day
+const postWorkout = {
+day1:["Cardio Type","Cardio Minutes"],
+day2:["Cardio Type","Cardio Minutes"],
+day3:["Cardio Type","Cardio Minutes","Core Exercise","Core Sets / Duration"],
+day4:["Cardio Type","Cardio Minutes"],
+day5:["Cardio Type","Cardio Minutes","Core Exercise","Core Sets / Duration"],
+day6:["Cardio Type","Cardio Minutes","Stretching Exercises","Stretch Duration"]
 };
 
 // Timer functions
@@ -144,128 +117,129 @@ function resetTimer(){
  document.getElementById("timer").textContent=60;
 }
 
-// LocalStorage functions
-function getLog(){
- return JSON.parse(localStorage.getItem(today)||"{}");
-}
-function saveLog(d){
- localStorage.setItem(today,JSON.stringify(d));
- renderChart();
-}
+// LocalStorage
+function getLog(){ return JSON.parse(localStorage.getItem(today)||"{}"); }
+function saveLog(d){ localStorage.setItem(today,JSON.stringify(d)); renderChart(); }
+function logSection(s){ const l=getLog(); l[s]="Done"; saveLog(l); }
 
-function logSection(s){
- const l = getLog();
- l[s] = "Done";
- saveLog(l);
-}
-
-// Workout render
+// Render workout
 function renderWorkout(){
  const day = document.getElementById("daySelect").value;
  const area = document.getElementById("workoutArea");
  area.innerHTML="<h3>🏋️ Workout</h3>";
 
- // Load last week data for reference
- const lastWeek = JSON.parse(localStorage.getItem(day+"_lastWeek")||"{}");
+ // Load last session for auto-fill
+ const lastSession = JSON.parse(localStorage.getItem(day+"_lastSession")||"{}");
+ let inputIndex=0;
 
- workouts[day].forEach((ex,index)=>{
-  let div = document.createElement("div");
+ // Strength exercises
+ workouts[day].forEach(ex=>{
+  let div=document.createElement("div");
   div.className="exercise";
   let html=`<b>${ex[0]}</b>`;
   if(ex[1]>0){
     html+=`<div class="sets">`;
     for(let i=1;i<=ex[1];i++){
-      let lastVal = lastWeek[ex[0]] ? lastWeek[ex[0]][i-1] : "";
+      let lastVal = lastSession[ex[0]] ? lastSession[ex[0]][i-1] : "";
       html+=`<input placeholder="Set ${i}" value="${lastVal}" oninput="startTimer()">`;
     }
     html+=`</div>`;
-  } else {
-    html+=`<p class="small">Log cardio type/duration or stretching here</p>`;
-    html+=`<input placeholder="Type / Duration">`;
-  }
-  div.innerHTML = html;
+    inputIndex+=ex[1];
+  } else { html+=`<input placeholder="Type / Duration" value="${lastSession[ex[0]]||''}">`; }
+  div.innerHTML=html;
   area.appendChild(div);
  });
 
- let btn=document.createElement("button");
- btn.textContent="Save Workout";
- btn.onclick=()=>saveWorkout(day);
- area.appendChild(btn);
+ // Post-workout section
+if(postWorkout[day]){
+ let div=document.createElement("div");
+ div.className="exercise";
+ div.innerHTML="<b>🏁 Post-Workout Cardio / Core / Stretch</b>";
+ postWorkout[day].forEach(item=>{
+   let val = lastSession[item]||"";
+   div.innerHTML += `<input placeholder="${item}" value="${val}">`;
+ });
+ area.appendChild(div);
 }
 
-// Save workout with history for chart
+let btn=document.createElement("button");
+btn.textContent="Save Workout";
+btn.onclick=()=>saveWorkout(day);
+area.appendChild(btn);
+}
+
+// Save workout + update last session
 function saveWorkout(day){
- const inputs = [...document.querySelectorAll("#workoutArea input")].map(i=>i.value);
- const l = getLog();
- l.workout = inputs;
+ const inputs=[...document.querySelectorAll("#workoutArea input")].map(i=>i.value);
+ const l=getLog();
+ l.workout=inputs;
  saveLog(l);
 
- // Save for last week reference
- let lastWeekData = {};
- let exIndex = 0;
+ // Save last session
+ let lastSession={};
+ let inputIndex=0;
  workouts[day].forEach(ex=>{
-   let arr = [];
-   for(let i=0;i<ex[1];i++){
-     arr.push(inputs[exIndex]||0);
-     exIndex++;
-   }
-   lastWeekData[ex[0]] = arr;
+  if(ex[1]>0){
+    lastSession[ex[0]]=[];
+    for(let i=0;i<ex[1];i++){
+      lastSession[ex[0]].push(inputs[inputIndex++]||0);
+    }
+  } else { lastSession[ex[0]]=inputs[inputIndex++]||""; }
  });
- localStorage.setItem(day+"_lastWeek", JSON.stringify(lastWeekData));
- renderChart();
+if(postWorkout[day]){
+  postWorkout[day].forEach(item){
+    lastSession[item]=inputs[inputIndex++]||"";
+  }
+}
+localStorage.setItem(day+"_lastSession",JSON.stringify(lastSession));
+
+renderChart();
 }
 
-// Save body weight
+// Body weight
 function saveBodyWeight(){
- const l = getLog();
- l.bodyWeight = document.getElementById("bodyWeight").value;
+ const l=getLog();
+ l.bodyWeight=document.getElementById("bodyWeight").value;
  saveLog(l);
 }
 
 // Render chart
 function renderChart(){
- const l = getLog();
- const day = document.getElementById("daySelect").value;
- const ctx = document.getElementById("chartArea").getContext("2d");
+ const l=getLog();
+ const day=document.getElementById("daySelect").value;
+ const ctx=document.getElementById("chartArea").getContext("2d");
 
  let labels=[], lastWeekData=[], thisWeekData=[];
- let lastWeek = JSON.parse(localStorage.getItem(day+"_lastWeek")||"{}");
+ const lastWeek=JSON.parse(localStorage.getItem(day+"_lastWeek")||"{}");
  let inputIndex=0;
 
+ // Strength
  workouts[day].forEach(ex=>{
   if(ex[1]>0){
     for(let s=1;s<=ex[1];s++){
       labels.push(ex[0]+" Set "+s);
-      let lw = lastWeek[ex[0]] ? Number(lastWeek[ex[0]][s-1]||0) : 0;
-      let tw = Number(l.workout ? l.workout[inputIndex++]||0 : 0);
-      lastWeekData.push(lw);
-      thisWeekData.push(tw);
+      let lw=lastWeek[ex[0]]?Number(lastWeek[ex[0]][s-1]||0):0;
+      let tw=Number(l.workout?l.workout[inputIndex++]||0:0);
+      lastWeekData.push(lw); thisWeekData.push(tw);
     }
-  } else {
-    labels.push(ex[0]);
-    lastWeekData.push(0);
-    thisWeekData.push(0);
-  }
+  } else { labels.push(ex[0]); lastWeekData.push(0); thisWeekData.push(l.workout?l.workout[inputIndex++]||0:0); }
  });
 
- if(chartInstance) chartInstance.destroy();
- chartInstance = new Chart(ctx,{
-  type:"bar",
-  data:{
-   labels: labels,
-   datasets:[
-     {label:"Last Week", data:lastWeekData, backgroundColor:"rgba(0,123,255,0.4)"},
-     {label:"This Week", data:thisWeekData, backgroundColor:"rgba(0,123,255,1)"}
-   ]
-  },
-  options:{
-   responsive:true,
-   plugins:{legend:{position:"top"}},
-   scales:{
-     y:{beginAtZero:true}
-   }
-  }
+ // Post-workout
+if(postWorkout[day]){
+ postWorkout[day].forEach(item){
+   labels.push(item);
+   lastWeekData.push(0);
+   thisWeekData.push(l.workout?l.workout[inputIndex++]||0:0);
  });
+}
+
+if(chartInstance) chartInstance.destroy();
+chartInstance=new Chart(ctx,{
+ type:"bar",
+ data:{labels:labels,datasets:[{label:"Last Week",data:lastWeekData,backgroundColor:"rgba(0,123,255,0.4)"},{label:"This Week",data:thisWeekData,backgroundColor:"rgba(0,123,255,1)"}]},
+ options:{responsive:true,plugins:{legend:{position:"top"}},scales:{y:{beginAtZero:true}}}
+});
 }
 
 renderWorkout();
