@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body{font-family:-apple-system;background:#f2f2f7;padding:20px}
-.card{background:#fff;padding:15px;margin-bottom:15px;border-radius:12px}
+body{font-family:-apple-system;background:#f2f2f7;padding:20px;margin:0}
+.card{background:#fff;padding:15px;margin:15px 0;border-radius:12px}
 button,input,select{width:100%;padding:10px;margin-top:6px;font-size:15px}
 button{background:#007aff;color:#fff;border:none;border-radius:10px}
 .exercise{margin-top:12px}
@@ -21,7 +21,7 @@ canvas{margin-top:10px;background:#f9f9f9;border-radius:8px;padding:10px}
 <body>
 
 <h2>🏋️ Fitness Tracker</h2>
-<p class="small">6-Day Plan + Auto-fill Last Session + Mini Bar Charts • Fully Local</p>
+<p class="small">Select a day, fill weights, track post-workout & chart • Fully Local</p>
 
 <div class="card">
 <h3>📅 Workout Day</h3>
@@ -116,7 +116,6 @@ function startTimer(){
   if(timeLeft <= 0) clearInterval(timerInterval);
  },1000);
 }
-
 document.getElementById("resetTimer").addEventListener("click", ()=>{
  clearInterval(timerInterval);
  timeLeft = 60;
@@ -141,41 +140,41 @@ document.getElementById("saveWeight").addEventListener("click", ()=>{
 function renderWorkout(){
  const day = daySelect.value;
  const area = document.getElementById("workoutArea");
- area.innerHTML = ""; // clear old content
+ area.innerHTML = ""; // clear
 
  const lastSession = JSON.parse(localStorage.getItem(day+"_lastSession")||"{}");
 
  // Strength
- workouts[day].forEach(ex=>{
-   const div = document.createElement("div");
-   div.className = "exercise";
-   const title = document.createElement("b");
-   title.textContent = ex[0];
-   div.appendChild(title);
+workouts[day].forEach(ex=>{
+  const div = document.createElement("div");
+  div.className = "exercise";
+  const title = document.createElement("b");
+  title.textContent = ex[0];
+  div.appendChild(title);
 
-   if(ex[1]>0){
-     const setDiv = document.createElement("div");
-     setDiv.className = "sets";
-     lastSession[ex[0]] = lastSession[ex[0]] || [];
-     for(let i=0;i<ex[1];i++){
-       const input = document.createElement("input");
-       input.placeholder = "Set "+(i+1);
-       input.value = lastSession[ex[0]][i] || "";
-       input.addEventListener("input", startTimer);
-       setDiv.appendChild(input);
-     }
-     div.appendChild(setDiv);
-   } else {
-     const input = document.createElement("input");
-     input.placeholder = "Type / Duration";
-     input.value = lastSession[ex[0]] || "";
-     input.addEventListener("input", startTimer);
-     div.appendChild(input);
-   }
-   area.appendChild(div);
- });
+  if(ex[1]>0){
+    const setDiv = document.createElement("div");
+    setDiv.className = "sets";
+    lastSession[ex[0]] = lastSession[ex[0]] || [];
+    for(let i=0;i<ex[1];i++){
+      const input = document.createElement("input");
+      input.placeholder = "Set "+(i+1);
+      input.value = lastSession[ex[0]][i] || "";
+      input.addEventListener("input", startTimer);
+      setDiv.appendChild(input);
+    }
+    div.appendChild(setDiv);
+  } else {
+    const input = document.createElement("input");
+    input.placeholder = "Type / Duration";
+    input.value = lastSession[ex[0]] || "";
+    input.addEventListener("input", startTimer);
+    div.appendChild(input);
+  }
+  area.appendChild(div);
+});
 
- // Post-workout
+// Post-workout
 if(postWorkout[day]){
  const div = document.createElement("div");
  div.className = "exercise";
@@ -192,13 +191,13 @@ if(postWorkout[day]){
  area.appendChild(div);
 }
 
-// Save Workout button
+// Save button
 const btn = document.createElement("button");
 btn.textContent = "Save Workout";
 btn.addEventListener("click", ()=>saveWorkout(day));
 area.appendChild(btn);
 
-// Render chart
+// Chart
 renderChart();
 }
 
@@ -210,11 +209,10 @@ function saveWorkout(day){
  l.workout = inputs;
  saveLog(l);
 
- // Save last session
  let lastSession = {}, inputIndex=0;
  workouts[day].forEach(ex=>{
-   if(ex[1]>0){ lastSession[ex[0]] = []; for(let i=0;i<ex[1];i++) lastSession[ex[0]].push(inputs[inputIndex++]||0); }
-   else { lastSession[ex[0]] = inputs[inputIndex++]||""; }
+   if(ex[1]>0){ lastSession[ex[0]] = []; for(let i=0;i<ex[1];i++) lastSession[ex[0]].push(inputs[inputIndex++]||0);}
+   else{ lastSession[ex[0]] = inputs[inputIndex++]||""; }
  });
  if(postWorkout[day]){
    postWorkout[day].forEach(item){ lastSession[item] = inputs[inputIndex++]||""; }
@@ -223,17 +221,16 @@ function saveWorkout(day){
  renderChart();
 }
 
-// ---------- Render Chart ----------
+// ---------- Chart ----------
 function renderChart(){
  const l = getLog();
  const day = daySelect.value;
  const ctx = document.getElementById("chartArea").getContext("2d");
 
- let labels = [], lastWeekData = [], thisWeekData = [];
+ let labels=[], lastWeekData=[], thisWeekData=[];
  const lastWeek = JSON.parse(localStorage.getItem(day+"_lastWeek")||"{}");
  let inputIndex=0;
 
- // Strength
  workouts[day].forEach(ex=>{
    if(ex[1]>0){
      for(let i=0;i<ex[1];i++){
@@ -243,10 +240,8 @@ function renderChart(){
        lastWeekData.push(lw);
        thisWeekData.push(tw);
      }
-   } else { labels.push(ex[0]); lastWeekData.push(0); thisWeekData.push(l.workout ? l.workout[inputIndex++]||0 : 0); }
+   } else { labels.push(ex[0]); lastWeekData.push(0); thisWeekData.push(l.workout ? l.workout[inputIndex++]||0 : 0);}
  });
-
- // Post-workout
 if(postWorkout[day]){
  postWorkout[day].forEach(item){
    labels.push(item);
@@ -254,7 +249,6 @@ if(postWorkout[day]){
    thisWeekData.push(l.workout ? l.workout[inputIndex++]||0 : 0);
  }
 }
-
 if(chartInstance) chartInstance.destroy();
 chartInstance = new Chart(ctx,{
  type:"bar",
@@ -264,9 +258,9 @@ chartInstance = new Chart(ctx,{
 }
 
 // ---------- Initialize ----------
-renderWorkout();
 daySelect.addEventListener("change", renderWorkout);
-
+daySelect.value = "day1"; // default
+renderWorkout();
 </script>
 </body>
 </html>
