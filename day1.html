@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fitness Tracker - Day 1</title>
+<title>Fitness Tracker</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
@@ -20,8 +20,14 @@ canvas{margin-top:10px;background:#f9f9f9;border-radius:8px;padding:10px}
 </head>
 <body>
 
-<h2>🏋️ Fitness Tracker - Day 1</h2>
-<p class="small">Upper Body (Push + Pull) • Mini Bar Charts • Local Only</p>
+<h2>🏋️ Fitness Tracker</h2>
+<p class="small">5-Day Strength + Optional Day 6 Cardio/Stretch • Mini Bar Charts • Local Only</p>
+
+<!-- Day Dropdown -->
+<div class="card">
+<h3>📅 Workout Day</h3>
+<select id="daySelect"></select>
+</div>
 
 <!-- Daily Warm-up -->
 <div class="card">
@@ -61,23 +67,35 @@ Bodyweight squats ×15
 
 <script>
 // -------- Variables --------
-const day = "day1";
 const today = new Date().toLocaleDateString();
-let timerInterval, timeLeft = 60;
-let chartInstance;
+let timerInterval, timeLeft=60, chartInstance;
 
-const workouts = [
-["Chest Press",3],
-["Pec Deck",3],
-["Lat Pulldown",3],
-["Seated Row",3],
-["Shoulder Press",3],
-["Lateral Raise Machine",3],
-["Triceps Pushdown",3],
-["Biceps Curl Machine",3]
-];
+const days = {
+  day1: "Day 1 – Upper (Push + Pull)",
+  day2: "Day 2 – Lower",
+  day3: "Day 3 – Cardio + Core",
+  day4: "Day 4 – Upper (Angles)",
+  day5: "Day 5 – Lower + Core",
+  day6: "Day 6 – Optional Cardio / Stretch"
+};
 
-const postWorkout = ["Cardio Type","Cardio Minutes"];
+const workouts = {
+  day1:[["Chest Press",3],["Pec Deck",3],["Lat Pulldown",3],["Seated Row",3],["Shoulder Press",3],["Lateral Raise Machine",3],["Triceps Pushdown",3],["Biceps Curl Machine",3]],
+  day2:[["Leg Press",4],["Seated Leg Curl",3],["Leg Extension",3],["Hip Abductor",3],["Calf Raise",4]],
+  day3:[["Ab Crunch Machine",3],["Cable Woodchoppers (each side)",3],["Plank (seconds)",3]],
+  day4:[["Incline Chest Press",3],["Assisted Pull-Up / Wide Pulldown",3],["Rear Delt Fly",3],["Shoulder Press",3],["Face Pull",3],["Assisted Dips",3],["Preacher Curl Machine",3]],
+  day5:[["Hack Squat / Leg Press",4],["RDL Machine / Lying Curl",3],["Walking Lunges (per leg)",3],["Hip Thrust / Glute Bridge",3],["Calf Raise",4],["Hanging Knee Raises",3],["Plank (seconds)",3]],
+  day6:[["Cardio Type / Duration",0],["Stretching Exercises / Duration",0]]
+};
+
+const postWorkout = {
+  day1:["Cardio Type","Cardio Minutes"],
+  day2:["Cardio Type","Cardio Minutes"],
+  day3:["Cardio Type","Cardio Minutes","Core Exercise","Core Sets / Duration"],
+  day4:["Cardio Type","Cardio Minutes"],
+  day5:["Cardio Type","Cardio Minutes","Core Exercise","Core Sets / Duration"],
+  day6:["Cardio Type","Cardio Minutes","Stretching Exercises","Stretch Duration"]
+};
 
 // -------- Timer --------
 function startTimer(){
@@ -90,7 +108,9 @@ function startTimer(){
     if(timeLeft<=0) clearInterval(timerInterval);
   },1000);
 }
-document.getElementById("resetTimer").addEventListener("click",()=>{timeLeft=60;document.getElementById("timer").textContent=60;clearInterval(timerInterval);});
+document.getElementById("resetTimer").addEventListener("click",()=>{
+  timeLeft=60; document.getElementById("timer").textContent=60; clearInterval(timerInterval);
+});
 
 // -------- LocalStorage --------
 function getLog(){ return JSON.parse(localStorage.getItem(today)||"{}"); }
@@ -98,35 +118,43 @@ function saveLog(d){ localStorage.setItem(today,JSON.stringify(d)); renderChart(
 
 // -------- Warmup --------
 document.getElementById("warmupBtn").addEventListener("click",()=>{
-  const l = getLog(); l.warmup="Done"; saveLog(l);
+  const l=getLog(); l.warmup="Done"; saveLog(l);
 });
 
 // -------- Body Weight --------
 document.getElementById("saveWeight").addEventListener("click",()=>{
-  const l = getLog();
-  l.bodyWeight = document.getElementById("bodyWeight").value;
-  saveLog(l);
+  const l=getLog(); l.bodyWeight=document.getElementById("bodyWeight").value; saveLog(l);
 });
+
+// -------- Populate dropdown --------
+const daySelect = document.getElementById("daySelect");
+for(const key in days){
+  const opt = document.createElement("option");
+  opt.value = key;
+  opt.textContent = days[key];
+  daySelect.appendChild(opt);
+}
 
 // -------- Render Workout --------
 function renderWorkout(){
-  const area = document.getElementById("workoutArea");
+  const day = daySelect.value;
+  const area=document.getElementById("workoutArea");
   area.innerHTML="<h3>🏋️ Workout</h3>";
 
-  // Load last session
-  let lastSession = JSON.parse(localStorage.getItem(day+"_lastSession")||"{}");
+  const lastSession = JSON.parse(localStorage.getItem(day+"_lastSession")||"{}");
 
-  workouts.forEach(ex=>{
-    const div = document.createElement("div"); div.className="exercise";
-    const title = document.createElement("b"); title.textContent=ex[0]; div.appendChild(title);
+  // Exercises
+  workouts[day].forEach(ex=>{
+    const div=document.createElement("div"); div.className="exercise";
+    const title=document.createElement("b"); title.textContent=ex[0]; div.appendChild(title);
 
     if(ex[1]>0){
-      const setDiv = document.createElement("div"); setDiv.className="sets";
+      const setDiv=document.createElement("div"); setDiv.className="sets";
       lastSession[ex[0]]=lastSession[ex[0]]||[];
       for(let i=0;i<ex[1];i++){
         const input=document.createElement("input");
         input.placeholder="Set "+(i+1);
-        input.value = lastSession[ex[0]][i]||"";
+        input.value=lastSession[ex[0]][i]||"";
         input.addEventListener("input", startTimer);
         setDiv.appendChild(input);
       }
@@ -134,42 +162,43 @@ function renderWorkout(){
     } else {
       const input=document.createElement("input");
       input.placeholder="Type / Duration";
-      input.value = lastSession[ex[0]]||"";
+      input.value=lastSession[ex[0]]||"";
       input.addEventListener("input", startTimer);
       div.appendChild(input);
     }
     area.appendChild(div);
   });
 
-  // Post-workout section
-  const postDiv = document.createElement("div"); postDiv.className="exercise";
-  const postTitle = document.createElement("b"); postTitle.textContent="🏁 Post-Workout Cardio / Core"; postDiv.appendChild(postTitle);
-  postWorkout.forEach(item=>{
-    const input=document.createElement("input");
-    input.placeholder=item;
-    input.value = lastSession[item]||"";
-    input.addEventListener("input", startTimer);
-    postDiv.appendChild(input);
-  });
-  area.appendChild(postDiv);
+  // Post-workout
+  if(postWorkout[day]){
+    const postDiv=document.createElement("div"); postDiv.className="exercise";
+    const postTitle=document.createElement("b"); postTitle.textContent="🏁 Post-Workout Cardio / Core / Stretch";
+    postDiv.appendChild(postTitle);
+    postWorkout[day].forEach(item=>{
+      const input=document.createElement("input");
+      input.placeholder=item;
+      input.value=lastSession[item]||"";
+      input.addEventListener("input", startTimer);
+      postDiv.appendChild(input);
+    });
+    area.appendChild(postDiv);
+  }
 
   // Save button
   const btn=document.createElement("button"); btn.textContent="Save Workout";
-  btn.onclick=()=>saveWorkout();
+  btn.onclick=()=>saveWorkout(day);
   area.appendChild(btn);
 
   renderChart();
 }
 
 // -------- Save Workout --------
-function saveWorkout(){
-  const area = document.getElementById("workoutArea");
-  const inputs = [...area.querySelectorAll("input")];
+function saveWorkout(day){
+  const area=document.getElementById("workoutArea");
+  const inputs=[...area.querySelectorAll("input")];
+  let lastSession={}, index=0;
 
-  let lastSession = {};
-  let index=0;
-
-  workouts.forEach(ex=>{
+  workouts[day].forEach(ex=>{
     if(ex[1]>0){
       lastSession[ex[0]]=[];
       for(let i=0;i<ex[1];i++){
@@ -180,45 +209,51 @@ function saveWorkout(){
     }
   });
 
-  postWorkout.forEach(item=>{
-    lastSession[item]=inputs[index++]?.value||"";
-  });
+  if(postWorkout[day]){
+    postWorkout[day].forEach(item=>{
+      lastSession[item]=inputs[index++]?.value||"";
+    });
+  }
 
   localStorage.setItem(day+"_lastSession", JSON.stringify(lastSession));
 
-  const todayLog = getLog();
-  todayLog.workout = lastSession;
+  // Also store today's log
+  const todayLog=getLog();
+  todayLog.workout=lastSession;
   saveLog(todayLog);
 }
 
 // -------- Chart --------
 function renderChart(){
-  const l = getLog();
+  const day=daySelect.value;
+  const l=getLog();
   const ctx=document.getElementById("chartArea").getContext("2d");
 
-  const lastSession = JSON.parse(localStorage.getItem(day+"_lastWeek")||"{}");
+  const lastWeek=JSON.parse(localStorage.getItem(day+"_lastWeek")||"{}");
 
-  let labels=[], lastWeekData=[], thisWeekData=[], index=0;
+  let labels=[], lastWeekData=[], thisWeekData=[];
 
-  workouts.forEach(ex=>{
+  workouts[day].forEach(ex=>{
     if(ex[1]>0){
       for(let i=0;i<ex[1];i++){
         labels.push(ex[0]+" Set "+(i+1));
-        let lw = lastSession[ex[0]] ? Number(lastSession[ex[0]][i]||0):0;
-        let tw = l.workout && l.workout[ex[0]] ? Number(l.workout[ex[0]][i]||0):0;
+        let lw=lastWeek[ex[0]]?Number(lastWeek[ex[0]][i]||0):0;
+        let tw=l.workout && l.workout[ex[0]]?Number(l.workout[ex[0]][i]||0):0;
         lastWeekData.push(lw);
         thisWeekData.push(tw);
       }
     }
   });
 
-  postWorkout.forEach(item=>{
-    labels.push(item);
-    let lw=lastSession[item]?Number(lastSession[item]||0):0;
-    let tw=l.workout && l.workout[item]?Number(l.workout[item]||0):0;
-    lastWeekData.push(lw);
-    thisWeekData.push(tw);
-  });
+  if(postWorkout[day]){
+    postWorkout[day].forEach(item=>{
+      labels.push(item);
+      let lw=lastWeek[item]?Number(lastWeek[item]||0):0;
+      let tw=l.workout && l.workout[item]?Number(l.workout[item]||0):0;
+      lastWeekData.push(lw);
+      thisWeekData.push(tw);
+    });
+  }
 
   if(chartInstance) chartInstance.destroy();
   chartInstance=new Chart(ctx,{
@@ -232,6 +267,8 @@ function renderChart(){
 }
 
 // -------- Initialize --------
+daySelect.value="day1";
+daySelect.addEventListener("change", renderWorkout);
 renderWorkout();
 </script>
 
