@@ -145,7 +145,8 @@ function renderWorkout(){
  const area = document.getElementById("workoutArea");
  area.innerHTML = "<h3>🏋️ Workout</h3>";
 
- const lastSession = JSON.parse(localStorage.getItem(day+"_lastSession")||"{}");
+ let lastSession = {};
+try { lastSession = JSON.parse(localStorage.getItem(day+"_lastSession")||"{}"); } catch(e){}
 
  // Main exercises
  workouts[day].forEach(ex=>{
@@ -177,7 +178,7 @@ function renderWorkout(){
    area.appendChild(div);
  });
 
- // --- Post-Workout Section ---
+ // Post-Workout Section
 if(postWorkout[day]){
  const div = document.createElement("div");
  div.className="exercise";
@@ -282,7 +283,7 @@ function renderChart(){
 daySelect.value="day1";
 renderWorkout();
 daySelect.addEventListener("change", renderWorkout);
-
 </script>
+
 </body>
 </html>
