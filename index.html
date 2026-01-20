@@ -5,14 +5,16 @@
 <title>Fitness Tracker</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <style>
 body{font-family:-apple-system;background:#f2f2f7;padding:20px}
 .card{background:white;padding:15px;margin-bottom:15px;border-radius:12px}
-button,input{width:100%;padding:12px;margin-top:10px;font-size:16px}
+input,button{width:100%;padding:10px;margin-top:6px;font-size:15px}
 button{background:#007aff;color:white;border:none;border-radius:10px}
-.workout{display:flex;justify-content:space-between;align-items:center}
+.exercise{margin-top:10px}
+.set{display:flex;gap:6px}
+.set input{flex:1}
+.small{font-size:13px;color:#666}
 </style>
 </head>
 
@@ -20,53 +22,53 @@ button{background:#007aff;color:white;border:none;border-radius:10px}
 
 <h2>🏋️ Fitness Tracker</h2>
 
+<!-- WARM UP -->
 <div class="card">
-<h3>Log Weight</h3>
-<input id="weight" type="number" placeholder="Enter weight">
-<button onclick="saveWeight()">Save</button>
+<h3>🔥 Warm-Up</h3>
+<p class="small">5–10 min light cardio + mobility</p>
+<button onclick="saveSection('warmup')">Warm-Up Done</button>
 </div>
 
+<!-- WORKOUT -->
 <div class="card">
-<h3>Weight History</h3>
-<ul id="list"></ul>
+<h3>🏋️ Strength – Day 1 Upper</h3>
+
+<div class="exercise">
+<b>Chest Press</b>
+<div class="set">
+<input placeholder="Set 1 lbs">
+<input placeholder="Set 2 lbs">
+<input placeholder="Set 3 lbs">
+</div>
 </div>
 
-<div class="card">
-<h3>Workout (Option B)</h3>
-<div class="workout"><span>Day 1 – Upper</span><button onclick="logWorkout(1)">Done</button></div>
-<div class="workout"><span>Day 2 – Lower</span><button onclick="logWorkout(2)">Done</button></div>
-<div class="workout"><span>Day 3 – Cardio/Core</span><button onclick="logWorkout(3)">Done</button></div>
-<div class="workout"><span>Day 4 – Upper</span><button onclick="logWorkout(4)">Done</button></div>
-<div class="workout"><span>Day 5 – Lower</span><button onclick="logWorkout(5)">Done</button></div>
+<div class="exercise">
+<b>Lat Pulldown</b>
+<div class="set">
+<input placeholder="Set 1 lbs">
+<input placeholder="Set 2 lbs">
+<input placeholder="Set 3 lbs">
+</div>
 </div>
 
-<script>
-function saveWeight(){
- const w=document.getElementById("weight").value;
- if(!w)return;
- const d=JSON.parse(localStorage.getItem("weights")||"[]");
- d.push({date:new Date().toLocaleDateString(),weight:w});
- localStorage.setItem("weights",JSON.stringify(d));
- document.getElementById("weight").value="";
- render();
-}
-function render(){
- const l=document.getElementById("list");
- l.innerHTML="";
- (JSON.parse(localStorage.getItem("weights")||"[]")).forEach(e=>{
-  const li=document.createElement("li");
-  li.textContent=e.date+": "+e.weight;
-  l.appendChild(li);
- });
-}
-function logWorkout(day){
- const w=JSON.parse(localStorage.getItem("workouts")||"{}");
- w[new Date().toLocaleDateString()]=day;
- localStorage.setItem("workouts",JSON.stringify(w));
- alert("Workout logged ✅");
-}
-render();
-</script>
+<div class="exercise">
+<b>Shoulder Press</b>
+<div class="set">
+<input placeholder="Set 1 lbs">
+<input placeholder="Set 2 lbs">
+<input placeholder="Set 3 lbs">
+</div>
+</div>
 
-</body>
-</html>
+<button onclick="saveWorkout()">Save Strength Workout</button>
+</div>
+
+<!-- CARDIO -->
+<div class="card">
+<h3>❤️ Post-Workout Cardio</h3>
+<input id="cardioType" placeholder="Type (treadmill, bike)">
+<input id="cardioTime" placeholder="Minutes">
+<button onclick="saveCardio()">Save Cardio</button>
+</div>
+
+<!-- BODY WEIGHT
