@@ -11,8 +11,8 @@ body{font-family:-apple-system;background:#f2f2f7;padding:20px}
 button,input,select{width:100%;padding:10px;margin-top:6px;font-size:15px}
 button{background:#007aff;color:#fff;border:none;border-radius:10px}
 .exercise{margin-top:12px}
-.sets{display:flex;gap:6px}
-.sets input{flex:1}
+.sets{display:flex;gap:6px;flex-wrap:wrap;}
+.sets input{flex:1; min-width:60px;}
 .small{font-size:13px;color:#666}
 .timer{font-size:22px;font-weight:bold;text-align:center;margin-top:10px}
 canvas{margin-top:10px;background:#f9f9f9;border-radius:8px;padding:10px}
@@ -68,11 +68,11 @@ Bodyweight squats ×15
 
 <script>
 const today = new Date().toLocaleDateString();
-let timerInterval, timeLeft = 60;
+let timerInterval, timeLeft=60;
 let chartInstance;
 
-// Strength exercises per day
-const workouts = {
+// Full exercises
+const workouts={
 day1:[["Chest Press",3],["Pec Deck",3],["Lat Pulldown",3],["Seated Row",3],["Shoulder Press",3],["Lateral Raise Machine",3],["Triceps Pushdown",3],["Biceps Curl Machine",3]],
 day2:[["Leg Press",4],["Seated Leg Curl",3],["Leg Extension",3],["Hip Abductor",3],["Calf Raise",4]],
 day3:[["Ab Crunch Machine",3],["Cable Woodchoppers (each side)",3],["Plank (seconds)",3]],
@@ -82,7 +82,7 @@ day6:[["Cardio Type / Duration",0],["Stretching Exercises / Duration",0]]
 };
 
 // Post-workout per day
-const postWorkout = {
+const postWorkout={
 day1:["Cardio Type","Cardio Minutes"],
 day2:["Cardio Type","Cardio Minutes"],
 day3:["Cardio Type","Cardio Minutes","Core Exercise","Core Sets / Duration"],
@@ -104,49 +104,53 @@ function startTimer(){
 }
 function resetTimer(){ clearInterval(timerInterval); timeLeft=60; document.getElementById("timer").textContent=60; }
 
-// LocalStorage
+// Local storage helpers
 function getLog(){ return JSON.parse(localStorage.getItem(today)||"{}"); }
 function saveLog(d){ localStorage.setItem(today,JSON.stringify(d)); renderChart(); }
 function logSection(s){ const l=getLog(); l[s]="Done"; saveLog(l); }
 
-// Render workout
+// Render workout + auto-fill last session
 function renderWorkout(){
- const day = document.getElementById("daySelect").value;
- const area = document.getElementById("workoutArea");
+ const day=document.getElementById("daySelect").value;
+ const area=document.getElementById("workoutArea");
  area.innerHTML="<h3>🏋️ Workout</h3>";
 
- const lastSession = JSON.parse(localStorage.getItem(day+"_lastSession")||"{}");
+ const lastSession=JSON.parse(localStorage.getItem(day+"_lastSession")||"{}");
  let inputIndex=0;
 
- // Strength
+ // Strength exercises
  workouts[day].forEach(ex=>{
-  let div=document.createElement("div");
-  div.className="exercise";
-  let html=`<b>${ex[0]}</b>`;
-  if(ex[1]>0){
-    html+=`<div class="sets">`;
-    for(let i=1;i<=ex[1];i++){
-      let lastVal = lastSession[ex[0]] ? lastSession[ex[0]][i-1] : "";
-      html+=`<input placeholder="Set ${i}" value="${lastVal}" oninput="startTimer()">`;
-    }
-    html+=`</div>`;
-    inputIndex+=ex[1];
-  } else { html+=`<input placeholder="Type / Duration" value="${lastSession[ex[0]]||''}">`; }
-  div.innerHTML=html;
-  area.appendChild(div);
+   let div=document.createElement("div");
+   div.className="exercise";
+   let html=`<b>${ex[0]}</b>`;
+   if(ex[1]>0){
+     html+=`<div class="sets">`;
+     for(let i=0;i<ex[1];i++){
+       const val=(lastSession[ex[0]] && lastSession[ex[0]][i])?lastSession[ex[0]][i]:"";
+       html+=`<input placeholder="Set ${i+1}" value="${val}" oninput="startTimer()">`;
+       inputIndex++;
+     }
+     html+=`</div>`;
+   } else { // single input
+     const val = lastSession[ex[0]] || "";
+     html+=`<input placeholder="Type / Duration" value="${val}">`;
+     inputIndex++;
+   }
+   div.innerHTML=html;
+   area.appendChild(div);
  });
 
  // Post-workout
 if(postWorkout[day]){
- let div=document.createElement("div");
- div.className="exercise";
- div.innerHTML="<b>🏁 Post-Workout Cardio / Core / Stretch</b>";
- postWorkout[day].forEach(item=>{
-   let val = lastSession[item]||"";
-   div.innerHTML += `<input placeholder="${item}" value="${val}">`;
-   inputIndex++;
- });
- area.appendChild(div);
+  let div=document.createElement("div");
+  div.className="exercise";
+  div.innerHTML="<b>🏁 Post-Workout Cardio / Core / Stretch</b>";
+  postWorkout[day].forEach(item=>{
+    const val = lastSession[item] || "";
+    div.innerHTML+=`<input placeholder="${item}" value="${val}" oninput="startTimer()">`;
+    inputIndex++;
+  });
+  area.appendChild(div);
 }
 
 let btn=document.createElement("button");
@@ -155,35 +159,41 @@ btn.onclick=()=>saveWorkout(day);
 area.appendChild(btn);
 }
 
-// Save workout + update last session
+// Save workout + last session
 function saveWorkout(day){
  const inputs=[...document.querySelectorAll("#workoutArea input")].map(i=>i.value);
  const l=getLog();
  l.workout=inputs;
  saveLog(l);
 
- // Save last session properly
  let lastSession={};
  let inputIndex=0;
+
+ // Strength
  workouts[day].forEach(ex=>{
-  if(ex[1]>0){ lastSession[ex[0]]=[]; for(let i=0;i<ex[1];i++){ lastSession[ex[0]].push(inputs[inputIndex++]||0); } }
-  else{ lastSession[ex[0]]=inputs[inputIndex++]||""; }
+   if(ex[1]>0){
+     lastSession[ex[0]]=[];
+     for(let i=0;i<ex[1];i++){ lastSession[ex[0]].push(inputs[inputIndex++]||0); }
+   } else { lastSession[ex[0]]=inputs[inputIndex++]||""; }
  });
- if(postWorkout[day]){
-   postWorkout[day].forEach(item){ lastSession[item]=inputs[inputIndex++]||""; }
- }
+
+ // Post-workout
+if(postWorkout[day]){
+ postWorkout[day].forEach(item){ lastSession[item]=inputs[inputIndex++]||""; }
+}
+
  localStorage.setItem(day+"_lastSession",JSON.stringify(lastSession));
  renderChart();
 }
 
-// Body weight
+// Save body weight
 function saveBodyWeight(){
  const l=getLog();
  l.bodyWeight=document.getElementById("bodyWeight").value;
  saveLog(l);
 }
 
-// Render chart
+// Render mini bar chart
 function renderChart(){
  const l=getLog();
  const day=document.getElementById("daySelect").value;
@@ -193,23 +203,26 @@ function renderChart(){
  const lastWeek=JSON.parse(localStorage.getItem(day+"_lastWeek")||"{}");
  let inputIndex=0;
 
+ // Strength
  workouts[day].forEach(ex=>{
-  if(ex[1]>0){
-    for(let s=1;s<=ex[1];s++){
-      labels.push(ex[0]+" Set "+s);
-      let lw=lastWeek[ex[0]]?Number(lastWeek[ex[0]][s-1]||0):0;
-      let tw=Number(l.workout?l.workout[inputIndex++]||0:0);
-      lastWeekData.push(lw); thisWeekData.push(tw);
-    }
-  } else { labels.push(ex[0]); lastWeekData.push(0); thisWeekData.push(l.workout?l.workout[inputIndex++]||0:0); }
+   if(ex[1]>0){
+     for(let i=0;i<ex[1];i++){
+       labels.push(ex[0]+" Set "+(i+1));
+       let lw=lastWeek[ex[0]] ? Number(lastWeek[ex[0]][i]||0) : 0;
+       let tw=Number(l.workout ? l.workout[inputIndex++]||0 : 0);
+       lastWeekData.push(lw);
+       thisWeekData.push(tw);
+     }
+   } else { labels.push(ex[0]); lastWeekData.push(0); thisWeekData.push(l.workout?l.workout[inputIndex++]||0:0); }
  });
 
- if(postWorkout[day]){
- postWorkout[day].forEach(item){
-   labels.push(item);
-   lastWeekData.push(0);
-   thisWeekData.push(l.workout?l.workout[inputIndex++]||0:0);
- });
+ // Post-workout
+if(postWorkout[day]){
+  postWorkout[day].forEach(item){
+    labels.push(item);
+    lastWeekData.push(0);
+    thisWeekData.push(l.workout?l.workout[inputIndex++]||0:0);
+  });
 }
 
 if(chartInstance) chartInstance.destroy();
@@ -220,6 +233,7 @@ chartInstance=new Chart(ctx,{
 });
 }
 
+// Initialize
 renderWorkout();
 renderChart();
 </script>
