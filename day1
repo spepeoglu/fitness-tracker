@@ -1,1 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fitness Tracker – Day One</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{font-family:-apple-system;background:#f2f2f7;padding:20px}
+.card{background:#fff;padding:15px;margin-bottom:15px;border-radius:12px}
+button,input,select,textarea{width:100%;padding:10px;margin-top:6px;font-size:15px}
+button{background:#007aff;color:#fff;border:none;border-radius:10px}
+.exercise{margin-top:12px}
+.sets{display:flex;gap:6px}
+.sets input{flex:1}
+.small{font-size:13px;color:#666}
+.timer{font-size:22px;font-weight:bold;text-align:center;margin-top:10px}
+canvas{margin-top:10px;background:#f9f9f9;border-radius:8px;padding:10px}
+textarea{min-height:90px}
+</style>
+</head>
+
+<body>
+
+<h2>🏋️ Fitness Tracker</h2>
+<p class="small">Local only • Safe version • Day One</p>
+
+<!-- Day Select -->
+<div class="card">
+<h3>📅 Workout Day</h3>
+<select id="daySelect" onchange="renderWorkout()">
+  <option value="day1">Day 1 – Upper (Push + Pull)</option>
+  <option value="day2">Day 2 – Lower</option>
+  <option value="day3">Day 3 – Cardio + Core</option>
+  <option value="day4">Day 4 – Upper (Angles)</option>
+  <option value="day5">Day 5 – Lower + Core</option>
+  <option value="day6">Day 6 – Optional Cardio / Stretch</option>
+</select>
+</div>
+
+<!-- Warm-up -->
+<div class="card">
+<h3>🔥 Daily Warm-Up</h3>
+<p class="small">
+5 min treadmill / bike<br>
+Arm circles ×20<br>
+Leg swings ×15/leg<br>
+Hip circles ×10<br>
+Bodyweight squats ×15
+</p>
+<button onclick="logSection('warmup')">Warm-Up Done</button>
+</div>
+
+<!-- Rest Timer -->
+<div class="card">
+<h3>⏱ Rest Timer (60s)</h3>
+<div id="timer" class="timer">60</div>
+<button onclick="resetTimer()">Reset</button>
+</div>
+
+<!-- Workout -->
+<div class="card" id="workoutArea"></div>
+
+<!-- Body Weight -->
+<div class="card">
+<h3>⚖️ Body Weight</h3>
+<input id="bodyWeight" type="number" placeholder="Enter body weight">
+<button onclick="saveBodyWeight()">Save</button>
+</div>
+
+<!-- ✅ POST WORKOUT (SAFE) -->
+<div class="card">
+<h3>🧘 Post-Workout</h3>
+<textarea id="postWorkoutNotes" placeholder="Stretching, cardio, how you felt, pain, notes…"></textarea>
+<button onclick="savePostWorkout()">Save Post-Workout</button>
+</div>
+
+<!-- Chart -->
+<div class="card">
+<h3>📊 Today’s Progress</h3>
+<canvas id="chartArea"></canvas>
+</div>
+
+<script>
+const today = new Date().toLocaleDateString();
+let timerInterval, timeLeft = 60;
+let chartInstance;
+
+const workouts = {
+day1:[
+["Chest Press",3],["Pec Deck",3],["Lat Pulldown",3],["Seated Row",3],
+["Shoulder Press",3],["Lateral Raise",3],["Triceps Pushdown",3],["Biceps Curl",3]
+],
+day2:[
+["Leg Press",4],["Seated Leg Curl",3],["Leg Extension",3],["Hip Abductor",3],["Calf Raise",4]
+],
+day3:[
+["Ab Crunch",3],["Cable Woodchopper",3],["Plank (sec)",3]
+],
+day4:[
+["Incline Press",3],["Wide Pulldown",3],["Rear Delt Fly",3],
+["Shoulder Press",3],["Face Pull",3],["Assisted Dips",3],["Preacher Curl",3]
+],
+day5:[
+["Hack Squat",4],["RDL / Curl",3],["Walking Lunges",3],
+["Hip Thrust",3],["Calf Raise",4],["Knee Raises",3],["Plank",3]
+],
+day6:[
+["Cardio / Stretch",0]
+]
+};
+
+function startTimer(){
+ clearInterval(timerInterval);
+ timeLeft=60;
+ document.getElementById("timer").textContent=timeLeft;
+ timerInterval=setInterval(()=>{
+  timeLeft--;
+  document.getElementById("timer").textContent = timeLeft<=0?"Rest Over!":timeLeft;
+  if(timeLeft<=0) clearInterval(timerInterval);
+ },1000);
+}
+
+function resetTimer(){
+ clearInterval(timerInterval);
+ timeLeft=60;
+ document.getElementById("timer").textContent=60;
+}
+
+function getLog(){
+ return JSON.parse(localStorage.getItem(today)||"{}");
+}
+
+function saveLog(d){
+ localStorage.setItem(today,JSON.stringify(d));
+ renderChart();
+}
+
+function logSection(s){
+ const l=getLog();
+ l[s]="Done";
+ saveLog(l);
+}
+
+function renderWorkout(){
+ const day=document.getElementById("daySelect").value;
+ const area=document.getElementById("workoutArea");
+ area.innerHTML="<h3>🏋️ Workout</h3>";
+
+ workouts[day].forEach(ex=>{
+  let div=document.createElement("div");
+  div.className="exercise";
+  let html=`<b>${ex[0]}</b>`;
+  if(ex[1]>0){
+   html+=`<div class="sets">`;
+   for(let i=1;i<=ex[1];i++){
+    html+=`<input placeholder="Set ${i}" oninput="startTimer()">`;
+   }
+   html+=`</div>`;
+  } else {
+   html+=`<input placeholder="Details">`;
+  }
+  div.innerHTML=html;
+  area.appendChild(div);
+ });
+
+ let btn=document.createElement("button");
+ btn.textContent="Save Workout";
+ btn.onclick=saveWorkout;
+ area.appendChild(btn);
+}
+
+function saveWorkout(){
+ const inputs=[...document.querySelectorAll("#workoutArea input")].map(i=>i.value);
+ const l=getLog();
+ l.workout=inputs;
+ saveLog(l);
+}
+
+function saveBodyWeight(){
+ const l=getLog();
+ l.bodyWeight=document.getElementById("bodyWeight").value;
+ saveLog(l);
+}
+
+function savePostWorkout(){
+ const l=getLog();
+ l.postWorkout=document.getElementById("postWorkoutNotes").value;
+ saveLog(l);
+}
+
+function renderChart(){
+ const l=getLog();
+ const ctx=document.getElementById("chartArea").getContext("2d");
+ let data=(l.workout||[]).map(v=>Number(v)||0);
+
+ if(chartInstance) chartInstance.destroy();
+ chartInstance=new Chart(ctx,{
+  type:"bar",
+  data:{labels:data.map((_,i)=>"Set "+(i+1)),datasets:[
+   {label:"Today",data:data,backgroundColor:"rgba(0,123,255,0.9)"}
+  ]},
+  options:{responsive:true,scales:{y:{beginAtZero:true}}}
+ });
+}
+
+renderWorkout();
+renderChart();
+</script>
+
+</body>
+</html>
