@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fitness Tracker</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<style>
+body{font-family:-apple-system;background:#f2f2f7;padding:20px}
+.card{background:white;padding:15px;margin-bottom:15px;border-radius:12px}
+button,input{width:100%;padding:12px;margin-top:10px;font-size:16px}
+button{background:#007aff;color:white;border:none;border-radius:10px}
+.workout{display:flex;justify-content:space-between;align-items:center}
+</style>
+</head>
+
+<body>
+
+<h2>🏋️ Fitness Tracker</h2>
+
+<div class="card">
+<h3>Log Weight</h3>
+<input id="weight" type="number" placeholder="Enter weight">
+<button onclick="saveWeight()">Save</button>
+</div>
+
+<div class="card">
+<h3>Weight History</h3>
+<ul id="list"></ul>
+</div>
+
+<div class="card">
+<h3>Workout (Option B)</h3>
+<div class="workout"><span>Day 1 – Upper</span><button onclick="logWorkout(1)">Done</button></div>
+<div class="workout"><span>Day 2 – Lower</span><button onclick="logWorkout(2)">Done</button></div>
+<div class="workout"><span>Day 3 – Cardio/Core</span><button onclick="logWorkout(3)">Done</button></div>
+<div class="workout"><span>Day 4 – Upper</span><button onclick="logWorkout(4)">Done</button></div>
+<div class="workout"><span>Day 5 – Lower</span><button onclick="logWorkout(5)">Done</button></div>
+</div>
+
+<script>
+function saveWeight(){
+ const w=document.getElementById("weight").value;
+ if(!w)return;
+ const d=JSON.parse(localStorage.getItem("weights")||"[]");
+ d.push({date:new Date().toLocaleDateString(),weight:w});
+ localStorage.setItem("weights",JSON.stringify(d));
+ document.getElementById("weight").value="";
+ render();
+}
+function render(){
+ const l=document.getElementById("list");
+ l.innerHTML="";
+ (JSON.parse(localStorage.getItem("weights")||"[]")).forEach(e=>{
+  const li=document.createElement("li");
+  li.textContent=e.date+": "+e.weight;
+  l.appendChild(li);
+ });
+}
+function logWorkout(day){
+ const w=JSON.parse(localStorage.getItem("workouts")||"{}");
+ w[new Date().toLocaleDateString()]=day;
+ localStorage.setItem("workouts",JSON.stringify(w));
+ alert("Workout logged ✅");
+}
+render();
+</script>
+
+</body>
+</html>
