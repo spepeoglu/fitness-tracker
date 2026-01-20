@@ -243,6 +243,12 @@ function saveWorkout(day){
 // ---------- Chart ----------
 function renderChart(){
   const l = getLog();
+  if (!l.workout) {
+    // nothing saved yet; avoid errors
+    if (chartInstance) chartInstance.destroy();
+    return;
+  }
+
   const day = daySelect.value;
   const ctx = document.getElementById("chartArea").getContext("2d");
 
