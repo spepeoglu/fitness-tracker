@@ -300,6 +300,12 @@ function saveWorkout(day){
   const inputs=[...area.querySelectorAll("input")];
   let lastSession={}, index=0;
 
+  // Move current session to "last week" before overwriting
+  const previousSession = localStorage.getItem(day+"_lastSession");
+  if(previousSession){
+    localStorage.setItem(day+"_lastWeek", previousSession);
+  }
+
   workouts[day].forEach(ex=>{
     if(ex[1]>0){
       lastSession[ex[0]]=[];
@@ -366,8 +372,8 @@ function renderChart(){
   chartInstance=new Chart(ctx,{
     type:"bar",
     data:{labels:labels,datasets:[
-      {label:"Last Week", data:lastWeekData, backgroundColor:"rgba(0,123,255,0.4)"},
-      {label:"This Week", data:thisWeekData, backgroundColor:"rgba(0,123,255,1)"}
+      {label:"Last Session", data:lastWeekData, backgroundColor:"rgba(0,123,255,0.4)"},
+      {label:"This Session", data:thisWeekData, backgroundColor:"rgba(0,123,255,1)"}
     ]},
     options:{responsive:true,plugins:{legend:{position:"top"}},scales:{y:{beginAtZero:true}}}
   });
