@@ -16,12 +16,31 @@ button{background:#007aff;color:#fff;border:none;border-radius:10px}
 .small{font-size:13px;color:#666}
 .timer{font-size:22px;font-weight:bold;text-align:center;margin-top:10px}
 canvas{margin-top:10px;background:#f9f9f9;border-radius:8px;padding:10px}
+.gym-count{font-size:48px;font-weight:bold;text-align:center;color:#007aff}
+.gym-streak{text-align:center;color:#666;margin-bottom:10px}
+.history-list{max-height:200px;overflow-y:auto;margin-top:10px}
+.history-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
+.history-item:last-child{border-bottom:none}
+.day-tag{background:#e8f4ff;color:#007aff;padding:2px 8px;border-radius:6px;font-size:12px}
+.toggle-btn{background:#f2f2f7;color:#007aff;margin-top:10px}
+.clear-btn{background:#ff3b30;margin-top:10px}
 </style>
 </head>
 <body>
 
 <h2>🏋️ Fitness Tracker</h2>
 <p class="small">5-Day Strength + Optional Day 6 Cardio/Stretch • Mini Bar Charts • Local Only</p>
+
+<!-- Gym History Counter -->
+<div class="card">
+<h3>🔥 Gym Attendance</h3>
+<div class="gym-count" id="gymCount">0</div>
+<div class="gym-streak">Total Gym Days</div>
+<div id="currentStreak" class="small" style="text-align:center;margin-bottom:10px"></div>
+<button class="toggle-btn" id="toggleHistory">Show History</button>
+<div class="history-list" id="gymHistoryList" style="display:none"></div>
+<button class="clear-btn" id="clearHistory" style="display:none">Clear History</button>
+</div>
 
 <!-- Day Dropdown -->
 <div class="card">
@@ -61,7 +80,7 @@ Bodyweight squats ×15
 
 <!-- Charts -->
 <div class="card">
-<h3>📊 Today’s Progress</h3>
+<h3>📊 Today's Progress</h3>
 <canvas id="chartArea"></canvas>
 </div>
 
@@ -115,6 +134,89 @@ document.getElementById("resetTimer").addEventListener("click",()=>{
 // -------- LocalStorage --------
 function getLog(){ return JSON.parse(localStorage.getItem(today)||"{}"); }
 function saveLog(d){ localStorage.setItem(today,JSON.stringify(d)); renderChart(); }
+
+// -------- Gym History --------
+function getGymHistory(){
+  return JSON.parse(localStorage.getItem("gymHistory")||"[]");
+}
+
+function saveGymVisit(dayType){
+  const history = getGymHistory();
+  const existingIndex = history.findIndex(h => h.date === today);
+  
+  if(existingIndex === -1){
+    history.push({date: today, day: dayType, timestamp: Date.now()});
+  } else {
+    history[existingIndex].day = dayType;
+  }
+  
+  localStorage.setItem("gymHistory", JSON.stringify(history));
+  renderGymHistory();
+}
+
+function calculateStreak(){
+  const history = getGymHistory();
+  if(history.length === 0) return 0;
+  
+  const dates = history.map(h => new Date(h.date)).sort((a,b) => b-a);
+  let streak = 0;
+  let checkDate = new Date();
+  checkDate.setHours(0,0,0,0);
+  
+  for(let i=0; i<dates.length; i++){
+    const visitDate = new Date(dates[i]);
+    visitDate.setHours(0,0,0,0);
+    
+    const diffDays = Math.floor((checkDate - visitDate) / (1000*60*60*24));
+    
+    if(diffDays <= 1){
+      streak++;
+      checkDate = visitDate;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function renderGymHistory(){
+  const history = getGymHistory();
+  const count = history.length;
+  const streak = calculateStreak();
+  
+  document.getElementById("gymCount").textContent = count;
+  document.getElementById("currentStreak").innerHTML = streak > 1 ? `🔥 ${streak} day streak!` : "";
+  
+  const list = document.getElementById("gymHistoryList");
+  if(history.length === 0){
+    list.innerHTML = "<p class='small' style='text-align:center;padding:20px'>No gym visits recorded yet.<br>Complete a workout to start tracking!</p>";
+  } else {
+    const sorted = [...history].sort((a,b) => b.timestamp - a.timestamp);
+    list.innerHTML = sorted.map(h => `
+      <div class="history-item">
+        <span>${h.date}</span>
+        <span class="day-tag">${days[h.day] ? days[h.day].split("–")[0].trim() : h.day}</span>
+      </div>
+    `).join("");
+  }
+}
+
+// Toggle history visibility
+let historyVisible = false;
+document.getElementById("toggleHistory").addEventListener("click", ()=>{
+  historyVisible = !historyVisible;
+  document.getElementById("gymHistoryList").style.display = historyVisible ? "block" : "none";
+  document.getElementById("clearHistory").style.display = historyVisible ? "block" : "none";
+  document.getElementById("toggleHistory").textContent = historyVisible ? "Hide History" : "Show History";
+});
+
+// Clear history
+document.getElementById("clearHistory").addEventListener("click", ()=>{
+  if(confirm("Are you sure you want to clear all gym history? This cannot be undone.")){
+    localStorage.removeItem("gymHistory");
+    renderGymHistory();
+  }
+});
 
 // -------- Warmup --------
 document.getElementById("warmupBtn").addEventListener("click",()=>{
@@ -221,6 +323,11 @@ function saveWorkout(day){
   const todayLog=getLog();
   todayLog.workout=lastSession;
   saveLog(todayLog);
+  
+  // Save gym visit to history
+  saveGymVisit(day);
+  
+  alert("Workout saved! 💪");
 }
 
 // -------- Chart --------
@@ -270,6 +377,7 @@ function renderChart(){
 daySelect.value="day1";
 daySelect.addEventListener("change", renderWorkout);
 renderWorkout();
+renderGymHistory();
 </script>
 
 </body>
